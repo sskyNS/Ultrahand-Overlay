@@ -63,9 +63,8 @@
 
 
 //static bool debugFPS = true;
-
-//uint64_t RAM_Used_system_u = 0;
-//uint64_t RAM_Total_system_u = 0;
+uint64_t RAM_Used_system_u = 0;
+uint64_t RAM_Total_system_u = 0;
 
 
 // Define the duration boundaries (for smooth scrolling)
@@ -1075,14 +1074,14 @@ std::vector<u8> loadBitmapFile(const std::string& filePath, s32 width, s32 heigh
     std::ifstream file(filePath, std::ios::binary);
     if (!file) {
         //std::cerr << "Failed to open file: " << filePath << std::endl;
-        return bitmapData;
+        return {};
     }
 
     // Read the file content into the bitmapData buffer
     file.read(reinterpret_cast<char*>(bitmapData.data()), dataSize);
     if (!file) {
         //std::cerr << "Failed to read file: " << filePath << std::endl;
-        return bitmapData;
+        return {};
     }
 
     // Preprocess the bitmap data by shifting the color values
@@ -1131,10 +1130,10 @@ static std::atomic<bool> inPlot(false);
 //static uint8x16x4_t pixelData;
 
 // Global variables for FPS calculation
-//double lastTimeCount = 0.0;
-//int frameCount = 0;
-//float fps = 0.0f;
-//double elapsedTime = 0.0;
+double lastTimeCount = 0.0;
+int frameCount = 0;
+float fps = 0.0f;
+double elapsedTime = 0.0;
 
 
 // Variables for touch commands
@@ -1419,7 +1418,7 @@ void reinitializeVersionLabels() {
     cleanVersionLabels = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") != FALSE_STR);
     hideOverlayVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_overlay_versions") != FALSE_STR);
     hidePackageVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions") != FALSE_STR);
-    versionLabel = std::string(APP_VERSION) + "   (" + loaderTitle + " " + (cleanVersionLabels ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
+    versionLabel = std::string(  );
     //versionLabel = (cleanVersionLabels) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
 }
 
@@ -4059,8 +4058,8 @@ namespace tsl {
             std::string m_pageLeftName; // CUSTOM MODIFICATION
             std::string m_pageRightName; // CUSTOM MODIFICATION
             
-            std::string firstHalf = "Ultra";
-            std::string secondHalf = "hand";
+            std::string firstHalf = "RDP";
+            std::string secondHalf = "v8.8.7";
             //std::string firstHalf, secondHalf;
             //tsl::Color handColor = RGB888("#F7253E");
             tsl::Color titleColor = {0xF,0xF,0xF,0xF};
@@ -4099,6 +4098,8 @@ namespace tsl {
                         if (wallpaperData.empty()) {
                             if (isFileOrDirectory(WALLPAPER_PATH))
                                 wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
+                            else
+                                wallpaperData.clear();
                             //wallpaperData = loadBitmapFile(WALLPAPER_PATH, 224, 360);
                             //wallpaperData = preprocessBitmap(wallpaperData, 224, 360, 448, 720); 
                         }
@@ -4118,18 +4119,18 @@ namespace tsl {
 
             
             // Function to calculate FPS
-            //void updateFPS(double currentTimeCount) {
-            //    static double lastUpdateTime = currentTimeCount;
+            void updateFPS(double currentTimeCount) {
+                static double lastUpdateTime = currentTimeCount;
             //
-            //    frameCount++;
-            //    elapsedTime = currentTimeCount - lastUpdateTime;
+                frameCount++;
+                elapsedTime = currentTimeCount - lastUpdateTime;
             //
-            //    if (elapsedTime >= 1.0) { // Update FPS every second
-            //        fps = frameCount / static_cast<float>(elapsedTime);
-            //        lastUpdateTime = currentTimeCount;
-            //        frameCount = 0;
-            //    }
-            //}
+                if (elapsedTime >= 1.0) { // Update FPS every second
+                    fps = frameCount / static_cast<float>(elapsedTime);
+                    lastUpdateTime = currentTimeCount;
+                    frameCount = 0;
+                }
+            }
             
             // CUSTOM SECTION START
             virtual void draw(gfx::Renderer *renderer) override {
@@ -4144,8 +4145,6 @@ namespace tsl {
                     if (!wallpaperData.empty()) {
                         // Draw the bitmap at position (0, 0) on the screen
                         renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
-                    } else {
-                        inPlot.store(false, std::memory_order_release);
                     }
                     //inPlot = false;
                 }
@@ -4171,57 +4170,76 @@ namespace tsl {
                     SOC_temperatureStringSTD.clear();
                     
                     
-                    x = 20;
-                    fontSize = 42;
+                    x = 40;
+                    fontSize = 48;
                     offset = 6;
                     
                     countOffset = 0;
                     
 
-                    if (!disableColorfulLogo) {
-                        float progress;
-                        for (char letter : firstHalf) {
-                            counter = (2 * M_PI * (fmod(currentTimeCount, cycleDuration) + countOffset) / 1.5);
-                            progress = std::sin(counter); // -1 to 1
-                            
-                            highlightColor = {
-                                static_cast<u8>((std::get<0>(dynamicLogoRGB2) - std::get<0>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<0>(dynamicLogoRGB1)),
-                                static_cast<u8>((std::get<1>(dynamicLogoRGB2) - std::get<1>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<1>(dynamicLogoRGB1)),
-                                static_cast<u8>((std::get<2>(dynamicLogoRGB2) - std::get<2>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<2>(dynamicLogoRGB1)),
-                                15
-                            };
-                            
-                            renderer->drawString(std::string(1, letter), false, x, y + offset, fontSize, a(highlightColor));
-                            x += renderer->calculateStringWidth(std::string(1, letter), fontSize);
-                            countOffset -= 0.2F;
-                        }
-                    } else {
-                        for (char letter : firstHalf) {
-                            renderer->drawString(std::string(1, letter), false, x, y + offset, fontSize, a(logoColor1));
-                            x += renderer->calculateStringWidth(std::string(1, letter), fontSize);
-                            countOffset -= 0.2F;
-                        }
-                    }
+					if (!disableColorfulLogo) {
+						float progress;
+						for (char letter : firstHalf) {
+							counter = (2 * M_PI * (fmod(currentTimeCount, cycleDuration) + countOffset) / 1.5);
+							progress = std::sin(counter); // -1 to 1
+
+							highlightColor = {
+								static_cast<u8>((std::get<0>(dynamicLogoRGB2) - std::get<0>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<0>(dynamicLogoRGB1)),
+								static_cast<u8>((std::get<1>(dynamicLogoRGB2) - std::get<1>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<1>(dynamicLogoRGB1)),
+								static_cast<u8>((std::get<2>(dynamicLogoRGB2) - std::get<2>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<2>(dynamicLogoRGB1)),
+								15
+							};
+
+							renderer->drawString(std::string(1, letter), false, x, y + offset, 48, a(highlightColor));
+							x += renderer->calculateStringWidth(std::string(1, letter), 48);
+							countOffset -= 0.2F;
+						}
+
+						// Add similar logic for secondHalf
+						for (char letter : secondHalf) {
+							counter = (2 * M_PI * (fmod(currentTimeCount, cycleDuration) + countOffset) / 1.5);
+							progress = std::sin(counter); // -1 to 1
+
+							highlightColor = {
+								static_cast<u8>((std::get<0>(dynamicLogoRGB2) - std::get<0>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<0>(dynamicLogoRGB1)),
+								static_cast<u8>((std::get<1>(dynamicLogoRGB2) - std::get<1>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<1>(dynamicLogoRGB1)),
+								static_cast<u8>((std::get<2>(dynamicLogoRGB2) - std::get<2>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<2>(dynamicLogoRGB1)),
+								15
+							};
+
+							renderer->drawString(std::string(1, letter), false, x, y + offset, 20, a(highlightColor));
+							x += renderer->calculateStringWidth(std::string(1, letter), 20);
+							countOffset -= 0.2F;
+						}
+					} else {
+						// Handle the case when disableColorfulLogo is true
+						for (char letter : firstHalf) {
+							renderer->drawString(std::string(1, letter), false, x, y + offset, 48, a(logoColor1));
+							x += renderer->calculateStringWidth(std::string(1, letter), 48);
+							countOffset -= 0.2F;
+						}
+
+						renderer->drawString(secondHalf, false, x, y + offset, 20, a(logoColor2));
+					}
+
+					if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock)) {
+						renderer->drawRect(245, 23, 1, 49, a(separatorColor));
+					}
+
+					y_offset = 45;
+					if ((hideBattery && hidePCBTemp && hideSOCTemp) || hideClock) {
+						y_offset += 10;
+					}
+
+					if (!hideClock) {
+						clock_gettime(CLOCK_REALTIME, &currentTimeSpec);
+						strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTimeSpec.tv_sec));
+						localizeTimeStr(timeStr);
+						renderer->drawString(std::string(timeStr), false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20, true) - 20, y_offset, 20, a(clockColor));
+						y_offset += 22;
+					}
+
                     
-                    renderer->drawString(secondHalf, false, x, y + offset, fontSize, a(logoColor2));
-                    
-                    if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock)) {
-                        renderer->drawRect(245, 23, 1, 49, a(separatorColor));
-                    }
-                    
-                    
-                    y_offset = 45;
-                    if ((hideBattery && hidePCBTemp && hideSOCTemp) || hideClock) {
-                        y_offset += 10;
-                    }
-                    
-                    if (!hideClock) {
-                        clock_gettime(CLOCK_REALTIME, &currentTimeSpec);
-                        strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTimeSpec.tv_sec));
-                        localizeTimeStr(timeStr);
-                        renderer->drawString(std::string(timeStr), false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20, true) - 20, y_offset, 20, a(clockColor));
-                        y_offset += 22;
-                    }
                     
                     //if ((currentTimeSpec.tv_sec - timeOut) >= 1) {
                     //    if (!isHidden.load()) {
@@ -4400,33 +4418,42 @@ namespace tsl {
                 // Render the text with special character handling
                 renderer->drawStringWithColoredSections(menuBottomLine, {"\uE0E1","\uE0E0","\uE0ED","\uE0EE"}, 30, 693, 23, a(bottomTextColor), a(buttonColor));
                 
-                //if (true) {
-                //    // Update FPS
-                //    updateFPS(currentTimeCount);
-                //
-                //    // Convert FPS to string
-                //    std::ostringstream fpsStream;
-                //    fpsStream << std::fixed << std::setprecision(2) << "FPS: " << fps;
-                //    std::string fpsString = fpsStream.str();
-                //    
-                //    // Draw FPS string at the bottom left corner
-                //    renderer->drawString(fpsString, false, 20, tsl::cfg::FramebufferHeight - 60, 20, a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF))); // Adjust position and color as needed
-                //    
-                //    //svcGetSystemInfo(&RAM_Used_system_u, 1, INVALID_HANDLE, 2);
-                //    //svcGetSystemInfo(&RAM_Total_system_u, 0, INVALID_HANDLE, 2);
-                //    //
-                //    //float RAM_Total_system_f = (float)RAM_Total_system_u / 1024 / 1024;
-                //    //float RAM_Used_system_f = (float)RAM_Used_system_u / 1024 / 1024;
+                if (true) {
+				#include <sstream>
+				#include <iomanip>
+				#include "tesla.hpp" // 确保包含了正确的头文件
+
+				// Update FPS
+				updateFPS(currentTimeCount);
+				//
+				// Convert FPS to string
+				std::ostringstream fpsStream;
+				fpsStream << std::fixed << std::setprecision(2) << "FPS: " << fps;
+				std::string fpsString = fpsStream.str();
+
+				// Determine the color based on the FPS value
+				tsl::Color fpsColor = (fps >= 30) ? tsl::Color(0x00, 0xFF, 0x00, 0xFF) : tsl::Color(0xFF, 0x00, 0x00, 0xFF);
+
+				// Draw FPS string at the bottom left corner
+				renderer->drawString(fpsString, false, 20, tsl::cfg::FramebufferHeight - 60, 20, a(fpsColor)); // Adjust position and color as needed
+
+				svcGetSystemInfo(&RAM_Used_system_u, 1, INVALID_HANDLE, 2);
+				svcGetSystemInfo(&RAM_Total_system_u, 0, INVALID_HANDLE, 2);
+				//
+				float RAM_Total_system_f = (float)RAM_Total_system_u / 1024 / 1024;
+				float RAM_Used_system_f = (float)RAM_Used_system_u / 1024 / 1024;
+
+
                 //    //
                 //    //// Convert RAM usage to strings
-                //    //std::ostringstream ramStream;
-                //    //ramStream << std::fixed << std::setprecision(2)
-                //    //          << RAM_Total_system_f - RAM_Used_system_f - 8.0 << " MB free (8 MB reserved)";
-                //    //std::string ramString = ramStream.str();
+                    std::ostringstream ramStream;
+                    ramStream << std::fixed << std::setprecision(2)
+                              << RAM_Total_system_f - RAM_Used_system_f - 8.0 << " MB 空闲 (8 MB 预留内存)";
+                    std::string ramString = ramStream.str();
                 //    //
                 //    //
-                //    //renderer->drawString(ramString.c_str(), false, 130, tsl::cfg::FramebufferHeight - 60, 20, a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF))); // Adjust position and color as needed
-                //}
+                    renderer->drawString(ramString.c_str(), false, 130, tsl::cfg::FramebufferHeight - 60, 16, a(tsl::Color(0xFF, 0xD7, 0x00, 0xFF))); // Adjust position and color as needed
+                }
 
                 
                 if (this->m_contentElement != nullptr)
